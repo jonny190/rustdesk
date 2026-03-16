@@ -1,12 +1,8 @@
-mod app;
-mod config;
-mod db;
-mod middleware;
-mod models;
-mod routes;
-
 use anyhow::Result;
-use config::ServerConfig;
+use rustdesk_server_console::app;
+use rustdesk_server_console::config::ServerConfig;
+use rustdesk_server_console::db;
+use rustdesk_server_console::models;
 use tracing_subscriber::EnvFilter;
 
 #[tokio::main]
@@ -22,27 +18,20 @@ async fn main() -> Result<()> {
     let pool = db::init_pool(&config.database_url).await?;
     tracing::info!("Database connected and migrations applied");
 
-    let state = app::AppState {
-        pool: pool.clone(),
-        config,
-    };
+    let state = app::AppState { pool: pool.clone(), config };
     let router = app::create_router(state);
 
-    // Background: clean expired sessions hourly
     let cleanup_pool = pool.clone();
     tokio::spawn(async move {
         let mut interval = tokio::time::interval(std::time::Duration::from_secs(3600));
         loop {
             interval.tick().await;
             if let Ok(n) = models::Session::delete_expired(&cleanup_pool).await {
-                if n > 0 {
-                    tracing::info!("Cleaned up {n} expired sessions");
-                }
+                if n > 0 { tracing::info!("Cleaned up {n} expired sessions"); }
             }
         }
     });
 
-    // Background: mark stale devices offline every 30s
     let stale_pool = pool;
     tokio::spawn(async move {
         let mut interval = tokio::time::interval(std::time::Duration::from_secs(30));
