@@ -1,6 +1,8 @@
+pub mod ab;
 pub mod auth;
 pub mod console;
 pub mod devices;
+pub mod groups;
 pub mod users;
 
 use axum::Router;
@@ -17,4 +19,6 @@ pub fn authed_api_routes() -> Router<AppState> {
         .merge(auth::authed_routes())
         .merge(devices::routes())
         .merge(users::routes())
+        .merge(ab::routes())
+        .merge(groups::routes())
 }
