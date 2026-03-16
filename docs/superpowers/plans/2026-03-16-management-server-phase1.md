@@ -757,6 +757,26 @@ impl Device {
         Ok((total, devices))
     }
 
+    pub async fn search(pool: &PgPool, query: &str, page: i64, page_size: i64) -> sqlx::Result<(i64, Vec<Self>)> {
+        let pattern = format!("%{query}%");
+        let offset = (page - 1) * page_size;
+        let total: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM devices WHERE id ILIKE $1 OR hostname ILIKE $1 OR os ILIKE $1"
+        )
+        .bind(&pattern)
+        .fetch_one(pool)
+        .await?;
+        let devices = sqlx::query_as(
+            "SELECT * FROM devices WHERE id ILIKE $1 OR hostname ILIKE $1 OR os ILIKE $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3"
+        )
+        .bind(&pattern)
+        .bind(page_size)
+        .bind(offset)
+        .fetch_all(pool)
+        .await?;
+        Ok((total, devices))
+    }
+
     pub async fn mark_offline_stale(pool: &PgPool, stale_seconds: i64) -> sqlx::Result<u64> {
         let result = sqlx::query(
             "UPDATE devices SET status = 2, updated_at = now()
@@ -1415,7 +1435,7 @@ async fn list_users(
     let page = params.current.unwrap_or(1).max(1);
     let page_size = params.page_size.unwrap_or(100).min(500);
 
-    let (total, users) = User::list(&state.pool, page, page_size)
+    let (total, users) = User::list(&state.pool, page, page_size, None)
         .await
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
 
@@ -1742,7 +1762,7 @@ git commit -m "feat(server): add login and first-run setup page templates"
     <div style="display: flex; gap: 1rem;">
         <button type="submit">Save</button>
         <button type="button" class="secondary"
-                hx-delete="/console/users/{{ user.id }}"
+                hx-post="/console/users/{{ user.id }}/delete"
                 hx-confirm="Delete this user?"
                 hx-target="body">Delete</button>
     </div>
@@ -2102,9 +2122,20 @@ pub struct UserForm {
 }
 
 async fn user_new_page() -> Html<String> {
-    Html(SetupTemplate { error: None }.render().unwrap_or_default())
-    // Reuse setup template structure or create a dedicated new-user template.
-    // For now, the user creation is handled via the same form pattern as setup.
+    let html = r#"
+    <form method="POST" action="/console/users/new">
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username" required>
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" required minlength="8">
+        <fieldset><label><input type="checkbox" name="is_admin"> Administrator</label></fieldset>
+        <input type="hidden" name="status" value="1">
+        <button type="submit">Create User</button>
+    </form>
+    "#;
+    Html(html.to_string())
 }
 
 async fn user_create(
@@ -2239,7 +2270,10 @@ async fn devices_table_fragment(
     Query(params): Query<SearchParams>,
 ) -> Html<String> {
     let page = params.page.unwrap_or(1).max(1);
-    let (_, devices) = Device::list(&state.pool, page, 50, None).await.unwrap_or_default();
+    let (_, devices) = match params.search.as_deref().filter(|s| !s.is_empty()) {
+        Some(q) => Device::search(&state.pool, q, page, 50).await.unwrap_or_default(),
+        None => Device::list(&state.pool, page, 50, None).await.unwrap_or_default(),
+    };
 
     let mut html = String::new();
     for d in &devices {
