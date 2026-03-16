@@ -1,4 +1,5 @@
 pub mod auth;
+pub mod console;
 pub mod devices;
 pub mod users;
 

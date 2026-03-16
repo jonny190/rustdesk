@@ -23,8 +23,13 @@ pub fn create_router(state: AppState) -> Router {
         .merge(authed_api)
         .layer(CorsLayer::permissive());
 
+    let console_public = routes::console::public_routes();
+    let console_authed = routes::console::authed_routes(state.pool.clone());
+
     Router::new()
         .nest("/api", api)
+        .merge(console_public)
+        .merge(console_authed)
         .nest_service(
             "/static",
             ServeDir::new(

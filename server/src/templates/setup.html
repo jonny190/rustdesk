@@ -14,7 +14,7 @@
     <article>
         <h2>Initial Setup</h2>
         <p>Create the first admin account to get started.</p>
-        {% if let Some(ref err) = error %}
+        {% if let Some(err) = error %}
         <p role="alert" style="color: var(--pico-del-color);">{{ err }}</p>
         {% endif %}
         <form method="POST" action="/console/setup">

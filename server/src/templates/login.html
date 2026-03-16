@@ -13,7 +13,7 @@
 <body>
     <article>
         <h2>RustDesk Console</h2>
-        {% if let Some(ref err) = error %}
+        {% if let Some(err) = error %}
         <p role="alert" style="color: var(--pico-del-color);">{{ err }}</p>
         {% endif %}
         <form method="POST" action="/console/login">
