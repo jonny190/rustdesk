@@ -67,7 +67,7 @@ tokio = { version = "1", features = ["full"] }
 tower = "0.5"
 tower-http = { version = "0.6", features = ["cors", "fs"] }
 sqlx = { version = "0.8", features = ["runtime-tokio", "postgres", "uuid", "chrono", "json"] }
-askama = { version = "0.13", features = ["with-axum"] }
+askama = "0.13"
 askama_axum = "0.4"
 tower-cookies = "0.10"
 serde = { version = "1", features = ["derive"] }
@@ -1819,7 +1819,7 @@ git commit -m "feat(server): add login and first-run setup page templates"
             <dt>CPU</dt><dd>{{ device.cpu.as_deref().unwrap_or("-") }}</dd>
             <dt>Memory</dt><dd>{{ device.memory.as_deref().unwrap_or("-") }}</dd>
             <dt>IP</dt><dd>{{ device.ip.as_deref().unwrap_or("-") }}</dd>
-            <dt>Status</dt><dd>{% if device.status == 1 %}Online{% elif device.status == 0 %}Disabled{% else %}Offline{% endif %}</dd>
+            <dt>Status</dt><dd>{% if device.status == 1 %}Online{% else if device.status == 0 %}Disabled{% else %}Offline{% endif %}</dd>
         </dl>
     </article>
     <article>
