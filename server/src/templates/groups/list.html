@@ -1,0 +1,14 @@
+{% extends "layout.html" %}
+{% block title %}Groups - RustDesk Console{% endblock %}
+{% block heading %}Device Groups{% endblock %}
+{% block content %}
+<div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
+    <span></span>
+    <button hx-get="/console/groups/new-form" hx-target="#new-group-form" hx-swap="innerHTML">Add Group</button>
+</div>
+<div id="new-group-form"></div>
+<table>
+    <thead><tr><th>Name</th><th>Note</th><th>Created</th><th>Actions</th></tr></thead>
+    <tbody id="group-table" hx-get="/console/groups/table" hx-trigger="load" hx-swap="innerHTML"></tbody>
+</table>
+{% endblock %}

@@ -1,0 +1,9 @@
+{% extends "layout.html" %}
+{% block title %}Address Books - RustDesk Console{% endblock %}
+{% block heading %}Address Books{% endblock %}
+{% block content %}
+<table>
+    <thead><tr><th>Name</th><th>Owner</th><th>Personal</th><th>Created</th><th>Actions</th></tr></thead>
+    <tbody id="ab-table" hx-get="/console/address-books/table" hx-trigger="load" hx-swap="innerHTML"></tbody>
+</table>
+{% endblock %}

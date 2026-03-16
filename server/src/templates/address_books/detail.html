@@ -1,0 +1,14 @@
+{% extends "layout.html" %}
+{% block title %}Address Book: {{ ab.name }} - RustDesk Console{% endblock %}
+{% block heading %}Address Book: {{ ab.name }}{% endblock %}
+{% block content %}
+<h3>Peers</h3>
+<table>
+    <thead><tr><th>Peer ID</th><th>Alias</th><th>Tags</th><th>Note</th></tr></thead>
+    <tbody hx-get="/console/address-books/{{ ab.id }}/peers" hx-trigger="load" hx-swap="innerHTML"></tbody>
+</table>
+<h3>Tags</h3>
+<div hx-get="/console/address-books/{{ ab.id }}/tags" hx-trigger="load" hx-swap="innerHTML">Loading...</div>
+<h3>Sharing</h3>
+<div hx-get="/console/address-books/{{ ab.id }}/shares" hx-trigger="load" hx-swap="innerHTML">Loading...</div>
+{% endblock %}

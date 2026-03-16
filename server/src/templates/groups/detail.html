@@ -1,0 +1,20 @@
+{% extends "layout.html" %}
+{% block title %}Group: {{ group.name }} - RustDesk Console{% endblock %}
+{% block heading %}Group: {{ group.name }}{% endblock %}
+{% block content %}
+<form method="POST" action="/console/groups/{{ group.id }}">
+    <label for="name">Name</label>
+    <input type="text" id="name" name="name" value="{{ group.name }}" required>
+    <label for="note">Note</label>
+    <textarea id="note" name="note">{{ group.note.as_deref().unwrap_or_default() }}</textarea>
+    <div style="display: flex; gap: 1rem;">
+        <button type="submit">Save</button>
+        <button type="button" class="secondary"
+                hx-post="/console/groups/{{ group.id }}/delete"
+                hx-confirm="Delete this group?"
+                hx-target="body">Delete</button>
+    </div>
+</form>
+<h3>Devices in Group</h3>
+<div hx-get="/console/groups/{{ group.id }}/devices" hx-trigger="load" hx-swap="innerHTML">Loading...</div>
+{% endblock %}

@@ -1,0 +1,16 @@
+{% extends "layout.html" %}
+{% block title %}Settings - RustDesk Console{% endblock %}
+{% block heading %}Centralized Settings{% endblock %}
+{% block content %}
+<h3>Global Policy</h3>
+<form method="POST" action="/console/settings">
+    <input type="hidden" name="target_type" value="global">
+    <label for="name">Policy Name</label>
+    <input type="text" id="name" name="name" value="{{ name }}" required>
+    <label for="config_options">Config Options (JSON)</label>
+    <textarea id="config_options" name="config_options" rows="10" style="font-family: monospace;">{{ config_options }}</textarea>
+    <button type="submit">Save</button>
+</form>
+<h3>Group Policies</h3>
+<div hx-get="/console/settings/group-policies" hx-trigger="load" hx-swap="innerHTML">Loading...</div>
+{% endblock %}
