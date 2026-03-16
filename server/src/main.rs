@@ -1,7 +1,9 @@
+mod app;
 mod config;
 mod db;
 mod middleware;
 mod models;
+mod routes;
 
 use anyhow::Result;
 use config::ServerConfig;
@@ -14,13 +16,44 @@ async fn main() -> Result<()> {
         .init();
 
     let config = ServerConfig::from_env();
-    tracing::info!("rustdesk-server-console starting on {}", config.listen_addr);
+    let listen_addr = config.listen_addr.clone();
+    tracing::info!("rustdesk-server-console starting on {listen_addr}");
 
     let pool = db::init_pool(&config.database_url).await?;
     tracing::info!("Database connected and migrations applied");
 
-    // Keep pool alive (will be used by router in later tasks)
-    drop(pool);
+    let state = app::AppState {
+        pool: pool.clone(),
+        config,
+    };
+    let router = app::create_router(state);
 
+    // Background: clean expired sessions hourly
+    let cleanup_pool = pool.clone();
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(std::time::Duration::from_secs(3600));
+        loop {
+            interval.tick().await;
+            if let Ok(n) = models::Session::delete_expired(&cleanup_pool).await {
+                if n > 0 {
+                    tracing::info!("Cleaned up {n} expired sessions");
+                }
+            }
+        }
+    });
+
+    // Background: mark stale devices offline every 30s
+    let stale_pool = pool;
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(std::time::Duration::from_secs(30));
+        loop {
+            interval.tick().await;
+            let _ = models::Device::mark_offline_stale(&stale_pool, 90).await;
+        }
+    });
+
+    let listener = tokio::net::TcpListener::bind(&listen_addr).await?;
+    tracing::info!("Listening on {listen_addr}");
+    axum::serve(listener, router).await?;
     Ok(())
 }
