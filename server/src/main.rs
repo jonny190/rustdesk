@@ -7,13 +7,18 @@ use tracing_subscriber::EnvFilter;
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    eprintln!("rustdesk-server-console: initializing...");
+
     tracing_subscriber::fmt()
-        .with_env_filter(EnvFilter::from_default_env())
+        .with_env_filter(
+            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"))
+        )
         .init();
 
     let config = ServerConfig::from_env();
     let listen_addr = config.listen_addr.clone();
     tracing::info!("rustdesk-server-console starting on {listen_addr}");
+    tracing::info!("Connecting to database...");
 
     let pool = db::init_pool(&config.database_url).await?;
     tracing::info!("Database connected and migrations applied");

@@ -14,6 +14,7 @@ COPY --from=builder /app/server/src/static /opt/rustdesk-console/static
 
 ENV STATIC_DIR=/opt/rustdesk-console/static
 ENV LISTEN_ADDR=0.0.0.0:21114
+ENV RUST_LOG=info
 
 EXPOSE 21114
 
