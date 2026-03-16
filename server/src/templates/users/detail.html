@@ -1,0 +1,31 @@
+{% extends "layout.html" %}
+
+{% block title %}User: {{ user.username }} - RustDesk Console{% endblock %}
+{% block heading %}User: {{ user.username }}{% endblock %}
+
+{% block content %}
+<form method="POST" action="/console/users/{{ user.id }}">
+    <label for="username">Username</label>
+    <input type="text" id="username" name="username" value="{{ user.username }}" required>
+    <label for="email">Email</label>
+    <input type="email" id="email" name="email" value="{{ user.email.as_deref().unwrap_or_default() }}">
+    <fieldset>
+        <label>
+            <input type="checkbox" name="is_admin" {% if user.is_admin %}checked{% endif %}>
+            Administrator
+        </label>
+    </fieldset>
+    <label for="status">Status</label>
+    <select id="status" name="status">
+        <option value="1" {% if user.status == 1 %}selected{% endif %}>Normal</option>
+        <option value="0" {% if user.status == 0 %}selected{% endif %}>Disabled</option>
+    </select>
+    <div style="display: flex; gap: 1rem;">
+        <button type="submit">Save</button>
+        <button type="button" class="secondary"
+                hx-post="/console/users/{{ user.id }}/delete"
+                hx-confirm="Delete this user?"
+                hx-target="body">Delete</button>
+    </div>
+</form>
+{% endblock %}

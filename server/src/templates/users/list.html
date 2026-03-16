@@ -1,0 +1,27 @@
+{% extends "layout.html" %}
+
+{% block title %}Users - RustDesk Console{% endblock %}
+{% block heading %}Users{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
+    <input type="search" placeholder="Search users..."
+           hx-get="/console/users/table" hx-trigger="keyup changed delay:300ms"
+           hx-target="#user-table" name="search" style="max-width: 300px;">
+    <a href="/console/users/new" role="button">Add User</a>
+</div>
+<table>
+    <thead>
+        <tr>
+            <th>Username</th>
+            <th>Email</th>
+            <th>Role</th>
+            <th>Status</th>
+            <th>Created</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody id="user-table" hx-get="/console/users/table" hx-trigger="load" hx-swap="innerHTML">
+    </tbody>
+</table>
+{% endblock %}

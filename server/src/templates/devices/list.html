@@ -1,0 +1,24 @@
+{% extends "layout.html" %}
+
+{% block title %}Devices - RustDesk Console{% endblock %}
+{% block heading %}Devices{% endblock %}
+
+{% block content %}
+<input type="search" placeholder="Search devices..."
+       hx-get="/console/devices/table" hx-trigger="keyup changed delay:300ms"
+       hx-target="#device-table" name="search" style="max-width: 300px; margin-bottom: 1rem;">
+<table>
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Hostname</th>
+            <th>OS</th>
+            <th>Status</th>
+            <th>Last Seen</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody id="device-table" hx-get="/console/devices/table" hx-trigger="load" hx-swap="innerHTML">
+    </tbody>
+</table>
+{% endblock %}

@@ -1,0 +1,31 @@
+{% extends "layout.html" %}
+
+{% block title %}Device: {{ device.id }} - RustDesk Console{% endblock %}
+{% block heading %}Device: {{ device.id }}{% endblock %}
+
+{% block content %}
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+    <article>
+        <h4>System Info</h4>
+        <dl>
+            <dt>Hostname</dt><dd>{{ device.hostname.as_deref().unwrap_or("-") }}</dd>
+            <dt>OS</dt><dd>{{ device.os.as_deref().unwrap_or("-") }}</dd>
+            <dt>Version</dt><dd>{{ device.version.as_deref().unwrap_or("-") }}</dd>
+            <dt>CPU</dt><dd>{{ device.cpu.as_deref().unwrap_or("-") }}</dd>
+            <dt>Memory</dt><dd>{{ device.memory.as_deref().unwrap_or("-") }}</dd>
+            <dt>IP</dt><dd>{{ device.ip.as_deref().unwrap_or("-") }}</dd>
+            <dt>Status</dt><dd>{% if device.status == 1 %}Online{% else if device.status == 0 %}Disabled{% else %}Offline{% endif %}</dd>
+        </dl>
+    </article>
+    <article>
+        <h4>Settings</h4>
+        <form method="POST" action="/console/devices/{{ device.id }}">
+            <label for="note">Note</label>
+            <textarea id="note" name="note">{{ device.note.as_deref().unwrap_or_default() }}</textarea>
+            <label for="custom_id">Custom ID</label>
+            <input type="text" id="custom_id" name="custom_id" value="{{ device.custom_id.as_deref().unwrap_or_default() }}">
+            <button type="submit">Save</button>
+        </form>
+    </article>
+</div>
+{% endblock %}

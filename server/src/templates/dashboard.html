@@ -1,0 +1,21 @@
+{% extends "layout.html" %}
+
+{% block title %}Dashboard - RustDesk Console{% endblock %}
+{% block heading %}Dashboard{% endblock %}
+
+{% block content %}
+<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 2rem;">
+    <article>
+        <h3 hx-get="/console/stats/users" hx-trigger="load" hx-swap="innerHTML">-</h3>
+        <p>Total Users</p>
+    </article>
+    <article>
+        <h3 hx-get="/console/stats/devices-online" hx-trigger="load, every 10s" hx-swap="innerHTML">-</h3>
+        <p>Online Devices</p>
+    </article>
+    <article>
+        <h3 hx-get="/console/stats/devices-total" hx-trigger="load" hx-swap="innerHTML">-</h3>
+        <p>Total Devices</p>
+    </article>
+</div>
+{% endblock %}
