@@ -1,5 +1,7 @@
 mod config;
 mod db;
+mod middleware;
+mod models;
 
 use anyhow::Result;
 use config::ServerConfig;
