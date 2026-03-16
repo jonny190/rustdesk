@@ -98,7 +98,7 @@ CREATE TABLE users (
     email VARCHAR UNIQUE,
     password_hash VARCHAR,
     is_admin BOOLEAN DEFAULT false,
-    status SMALLINT DEFAULT 1,        -- 0=disabled, 1=normal, 2=unverified
+    status SMALLINT DEFAULT 1,        -- 0=disabled, 1=normal, -1=unverified
     oidc_provider VARCHAR,
     oidc_subject VARCHAR,
     totp_secret VARCHAR,
@@ -149,7 +149,8 @@ CREATE TABLE device_groups (
     id UUID PRIMARY KEY,
     name VARCHAR NOT NULL,
     note TEXT,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 ```
 
@@ -188,9 +189,15 @@ CREATE TABLE ab_tags (
 CREATE TABLE ab_shares (
     id UUID PRIMARY KEY,
     address_book_id UUID NOT NULL REFERENCES address_books(id) ON DELETE CASCADE,
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    group_id UUID REFERENCES device_groups(id) ON DELETE CASCADE,
     rule SMALLINT NOT NULL,           -- 1=read, 2=readWrite, 3=fullControl
-    UNIQUE(address_book_id, user_id)
+    UNIQUE(address_book_id, user_id),
+    UNIQUE(address_book_id, group_id),
+    CHECK (
+        (user_id IS NOT NULL AND group_id IS NULL) OR
+        (user_id IS NULL AND group_id IS NOT NULL)
+    )
 );
 ```
 
@@ -277,33 +284,38 @@ CREATE TABLE oidc_providers (
 
 These endpoints must match what the RustDesk client already calls. The request/response formats are dictated by existing client code.
 
+**Pagination convention:** All paginated endpoints accept `current` (1-based page number) and `pageSize` query parameters. Responses use the envelope `{total: int, data: [...]}`.
+
+**Note:** Several read operations use POST (e.g. address book listings). This matches the existing client convention, not REST convention. The server must use the exact methods the client sends.
+
 #### Authentication
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| POST | `/api/login` | Login with `{username, password, id, uuid}`, returns `{access_token, user}` |
+| POST | `/api/login` | Login with `{username, password, id, uuid}`. Returns `AuthBody`: `{type: "access_token", access_token, tfa_type, secret, user: UserPayload}`. For 2FA challenge, returns `{type: "2fa", tfa_type: "totp"}` instead |
 | POST | `/api/currentUser` | Returns user payload from bearer token |
 | POST | `/api/logout` | Invalidates session |
 | GET | `/api/login-options` | Returns list of enabled OIDC providers |
-| POST | `/api/oidc/auth` | Initiates OIDC flow, returns `{url}` |
-| GET | `/api/oidc/auth-query` | Polls OIDC result by UUID |
+| POST | `/api/oidc/auth` | Initiates OIDC flow with `{op, id, uuid, deviceInfo}`, returns `{code, url}` |
+| GET | `/api/oidc/auth-query` | Polls OIDC result with `?code=...&id=...&uuid=...` |
+| GET | `/api/oidc/callback` | OIDC provider redirect target; exchanges authorization code for tokens |
 
 #### Device Sync
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| POST | `/api/heartbeat` | Device heartbeat (legacy) |
-| POST | `/api/sysinfo` | Device system info upload |
-| POST | `/api/sysinfo_ver` | Check if sysinfo needs re-upload |
+| POST | `/api/heartbeat` | Device heartbeat with `{id, uuid, ver, conns, modified_at}`. Response carries strategy push: `{sysinfo?: bool, disconnect?: [int], modified_at?: i64, strategy?: {config_options, extra}}` |
+| POST | `/api/sysinfo` | Device system info upload. Returns plain text `SYSINFO_UPDATED` on success or `ID_NOT_FOUND` if device unknown |
+| POST | `/api/sysinfo_ver` | Check if sysinfo needs re-upload. Returns plain text version string; client compares to cached version |
 | POST | `/api/devices/cli` | Device CLI operations |
 
 #### Groups and Users
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| GET | `/api/device-group/accessible` | Paginated device groups |
-| GET | `/api/users` | Paginated users list |
-| GET | `/api/peers` | Paginated peers list |
+| GET | `/api/device-group/accessible` | Paginated device groups. Query: `current`, `pageSize` |
+| GET | `/api/users` | Paginated users list. Query: `current`, `pageSize`, `accessible`, `status` |
+| GET | `/api/peers` | Paginated peers list. Query: `current`, `pageSize`, `accessible`, `status` |
 
 #### Address Book
 
@@ -330,7 +342,6 @@ These endpoints must match what the RustDesk client already calls. The request/r
 |--------|------|---------|
 | POST | `/api/record` | Upload session recording chunks |
 | PUT | `/api/audit` | Update audit note |
-| GET | `/api/strategy` | Client fetches its policy/settings |
 
 ### Web Console Routes (HTML)
 
@@ -353,6 +364,8 @@ GET  /console/audit              Audit log with filters
 GET  /console/settings           Global and per-group policy editor
 GET  /console/settings/oidc      OIDC provider configuration
 GET  /console/recordings         Session recording browser
+GET  /console/setup              First-run admin setup (only accessible when no users exist)
+POST /console/setup              Create initial admin account
 ```
 
 ### Middleware Stack
@@ -365,7 +378,7 @@ Applied in order via Tower layers:
 4. **Auth extraction:**
    - `/api/*` routes: Bearer token from `Authorization` header
    - `/console/*` routes: Session cookie (HttpOnly, Secure)
-   - Public routes (no auth): `/api/login`, `/api/login-options`, `/api/oidc/auth`, `/console/login`
+   - Public routes (no auth): `/api/login`, `/api/login-options`, `/api/oidc/auth`, `/api/oidc/callback`, `/api/heartbeat`, `/api/sysinfo`, `/api/sysinfo_ver`, `/console/login`, `/console/setup`
 5. **Permission check** (Phase 3): Role-based, checks user permissions against route
 
 ## HTMX Interaction Patterns
@@ -434,10 +447,10 @@ layout.html                   Base shell (sidebar, topbar, HTMX/CSS includes)
 
 1. Client POSTs `{username, password, id, uuid}` to `/api/login`
 2. Server verifies password against argon2 hash
-3. If 2FA enabled: returns error prompting TOTP code, client re-submits
+3. If 2FA enabled: returns `{type: "2fa", tfa_type: "totp"}`, client re-submits with TOTP code
 4. On success: generates random 256-bit hex access token, inserts into `sessions` table
-5. Returns `{access_token, user: {name, email, is_admin, ...}}`
-6. Client stores token, sends as `Authorization: Bearer {token}` on all requests
+5. Returns `AuthBody`: `{type: "access_token", access_token, user: UserPayload}` where `UserPayload` includes `{name, display_name, email, avatar, note, status, is_admin, info: {settings, login_device_whitelist}, third_auth_type}`
+6. Client checks `type == "access_token"` to confirm success, stores token, sends as `Authorization: Bearer {token}` on all requests
 
 ### Local Login (Web Console)
 
@@ -450,13 +463,14 @@ layout.html                   Base shell (sidebar, topbar, HTMX/CSS includes)
 
 1. Admin configures provider via `/console/settings/oidc` (client_id, client_secret, issuer_url)
 2. `GET /api/login-options` returns enabled provider names
-3. Client POSTs to `/api/oidc/auth` with provider name + device UUID
-4. Server generates state/nonce, stores keyed by UUID, returns provider auth URL
-5. User authenticates in browser, provider redirects to `/api/oidc/callback`
-6. Server exchanges code for tokens, extracts subject/email from ID token
-7. Finds or creates user matched by `(oidc_provider, oidc_subject)`
-8. Creates session, stores result keyed by UUID
-9. Client polls `/api/oidc/auth-query` until session is ready
+3. Client POSTs to `/api/oidc/auth` with `{op, id, uuid, deviceInfo: {os, type, name}}`
+4. Server generates state/nonce, stores keyed by a generated `code`, returns `{code, url}`
+5. Client opens `url` in system browser; user authenticates with provider
+6. Provider redirects to `/api/oidc/callback?code=...&state=...`
+7. Server exchanges authorization code for tokens, extracts subject/email from ID token
+8. Finds or creates user matched by `(oidc_provider, oidc_subject)`
+9. Creates session, stores result keyed by the `code` from step 4
+10. Client polls `/api/oidc/auth-query?code=...&id=...&uuid=...` until session is ready
 
 ### Token Management
 
