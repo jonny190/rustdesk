@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -7,40 +7,45 @@
     <link rel="stylesheet" href="/static/pico.min.css">
     <script src="/static/htmx.min.js"></script>
     <style>
-        /* Reset Pico container width so it doesn't fight our flex layout */
-        :root { --pico-font-size: 16px; }
-        body { display: flex; min-height: 100vh; margin: 0; }
+        /* Wrap everything in a flex shell that Pico won't touch */
+        .app-shell {
+            display: flex;
+            min-height: 100vh;
+        }
 
-        /* Sidebar */
-        nav.sidebar {
+        /* Sidebar - use a div so Pico's nav reset doesn't apply */
+        .sidebar {
             width: 220px;
             min-width: 220px;
             padding: 1rem;
             background: var(--pico-card-background-color);
             border-right: 1px solid var(--pico-muted-border-color);
             overflow-y: auto;
+            flex-shrink: 0;
         }
-        nav.sidebar h4 { margin-bottom: 1rem; }
-        nav.sidebar a {
+        .sidebar h4 { margin-bottom: 1rem; }
+        .sidebar a {
             display: block;
             padding: 0.5rem 0.75rem;
             text-decoration: none;
             border-radius: 4px;
             margin-bottom: 0.25rem;
             font-size: 0.9rem;
-            white-space: nowrap;
+            color: var(--pico-color);
         }
-        nav.sidebar a:hover, nav.sidebar a.active { background: var(--pico-primary-focus); }
+        .sidebar a:hover, .sidebar a.active {
+            background: var(--pico-primary-focus);
+            color: var(--pico-primary);
+        }
+        .sidebar hr { margin: 0.5rem 0; }
 
         /* Main content */
-        main {
+        .app-main {
             flex: 1;
-            min-width: 0; /* prevent flex child from overflowing */
+            min-width: 0;
             padding: 1.5rem 2rem;
             overflow-y: auto;
-            max-width: 100%;
         }
-        main > * { max-width: 100%; }
 
         .topbar {
             display: flex;
@@ -52,7 +57,7 @@
         }
         .topbar h2 { margin-bottom: 0; }
 
-        /* Tame Pico's article (card) styling inside grids */
+        /* Cards */
         article { overflow: hidden; }
 
         /* Definition lists */
@@ -61,50 +66,54 @@
         dd { margin: 0; overflow: hidden; text-overflow: ellipsis; }
 
         /* Tables */
-        table { width: 100%; table-layout: fixed; }
+        .table-wrap { overflow-x: auto; }
+        table { width: 100%; }
         th, td { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-        /* Responsive: collapse sidebar on small screens */
+        /* Responsive */
         @media (max-width: 768px) {
-            body { flex-direction: column; }
-            nav.sidebar {
+            .app-shell { flex-direction: column; }
+            .sidebar {
                 width: 100%;
                 min-width: 100%;
                 border-right: none;
                 border-bottom: 1px solid var(--pico-muted-border-color);
                 display: flex;
                 flex-wrap: wrap;
+                align-items: center;
                 gap: 0.25rem;
-                padding: 0.5rem;
+                padding: 0.5rem 1rem;
             }
-            nav.sidebar h4 { width: 100%; margin-bottom: 0.5rem; }
-            nav.sidebar hr { display: none; }
-            main { padding: 1rem; }
+            .sidebar h4 { margin: 0 0.5rem 0 0; }
+            .sidebar hr { display: none; }
+            .app-main { padding: 1rem; }
         }
     </style>
 </head>
 <body>
-    {% block sidebar %}
-    <nav class="sidebar">
-        <h4>RustDesk</h4>
-        <a href="/console/" hx-boost="true">Dashboard</a>
-        <a href="/console/users" hx-boost="true">Users</a>
-        <a href="/console/devices" hx-boost="true">Devices</a>
-        <a href="/console/groups" hx-boost="true">Groups</a>
-        <a href="/console/address-books" hx-boost="true">Address Books</a>
-        <a href="/console/settings" hx-boost="true">Settings</a>
-        <hr>
-        <a href="/console/logout">Logout</a>
-    </nav>
-    {% endblock %}
-    <main>
-        <div class="topbar">
-            <h2>{% block heading %}{% endblock %}</h2>
-            <span>{% block topbar_right %}{% endblock %}</span>
+    <div class="app-shell">
+        {% block sidebar %}
+        <div class="sidebar">
+            <h4>RustDesk</h4>
+            <a href="/console/" hx-boost="true">Dashboard</a>
+            <a href="/console/users" hx-boost="true">Users</a>
+            <a href="/console/devices" hx-boost="true">Devices</a>
+            <a href="/console/groups" hx-boost="true">Groups</a>
+            <a href="/console/address-books" hx-boost="true">Address Books</a>
+            <a href="/console/settings" hx-boost="true">Settings</a>
+            <hr>
+            <a href="/console/logout">Logout</a>
         </div>
-        <div id="content">
-            {% block content %}{% endblock %}
-        </div>
-    </main>
+        {% endblock %}
+        <main class="app-main">
+            <div class="topbar">
+                <h2>{% block heading %}{% endblock %}</h2>
+                <span>{% block topbar_right %}{% endblock %}</span>
+            </div>
+            <div id="content">
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
 </body>
 </html>
