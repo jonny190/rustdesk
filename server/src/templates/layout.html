@@ -7,12 +7,80 @@
     <link rel="stylesheet" href="/static/pico.min.css">
     <script src="/static/htmx.min.js"></script>
     <style>
+        /* Reset Pico container width so it doesn't fight our flex layout */
+        :root { --pico-font-size: 16px; }
         body { display: flex; min-height: 100vh; margin: 0; }
-        nav.sidebar { width: 220px; padding: 1rem; background: var(--pico-card-background-color); border-right: 1px solid var(--pico-muted-border-color); }
-        nav.sidebar a { display: block; padding: 0.5rem; text-decoration: none; border-radius: 4px; margin-bottom: 0.25rem; }
+
+        /* Sidebar */
+        nav.sidebar {
+            width: 220px;
+            min-width: 220px;
+            padding: 1rem;
+            background: var(--pico-card-background-color);
+            border-right: 1px solid var(--pico-muted-border-color);
+            overflow-y: auto;
+        }
+        nav.sidebar h4 { margin-bottom: 1rem; }
+        nav.sidebar a {
+            display: block;
+            padding: 0.5rem 0.75rem;
+            text-decoration: none;
+            border-radius: 4px;
+            margin-bottom: 0.25rem;
+            font-size: 0.9rem;
+            white-space: nowrap;
+        }
         nav.sidebar a:hover, nav.sidebar a.active { background: var(--pico-primary-focus); }
-        main { flex: 1; padding: 2rem; overflow-y: auto; }
-        .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 1px solid var(--pico-muted-border-color); }
+
+        /* Main content */
+        main {
+            flex: 1;
+            min-width: 0; /* prevent flex child from overflowing */
+            padding: 1.5rem 2rem;
+            overflow-y: auto;
+            max-width: 100%;
+        }
+        main > * { max-width: 100%; }
+
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--pico-muted-border-color);
+        }
+        .topbar h2 { margin-bottom: 0; }
+
+        /* Tame Pico's article (card) styling inside grids */
+        article { overflow: hidden; }
+
+        /* Definition lists */
+        dl { display: grid; grid-template-columns: auto 1fr; gap: 0.25rem 1rem; }
+        dt { font-weight: 600; white-space: nowrap; margin: 0; }
+        dd { margin: 0; overflow: hidden; text-overflow: ellipsis; }
+
+        /* Tables */
+        table { width: 100%; table-layout: fixed; }
+        th, td { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+        /* Responsive: collapse sidebar on small screens */
+        @media (max-width: 768px) {
+            body { flex-direction: column; }
+            nav.sidebar {
+                width: 100%;
+                min-width: 100%;
+                border-right: none;
+                border-bottom: 1px solid var(--pico-muted-border-color);
+                display: flex;
+                flex-wrap: wrap;
+                gap: 0.25rem;
+                padding: 0.5rem;
+            }
+            nav.sidebar h4 { width: 100%; margin-bottom: 0.5rem; }
+            nav.sidebar hr { display: none; }
+            main { padding: 1rem; }
+        }
     </style>
 </head>
 <body>

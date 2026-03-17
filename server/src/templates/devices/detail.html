@@ -4,7 +4,7 @@
 {% block heading %}Device: {{ device.id }}{% endblock %}
 
 {% block content %}
-<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">
     <article>
         <h4>System Info</h4>
         <dl>

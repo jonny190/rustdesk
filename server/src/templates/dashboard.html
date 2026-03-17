@@ -4,7 +4,7 @@
 {% block heading %}Dashboard{% endblock %}
 
 {% block content %}
-<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 2rem;">
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
     <article>
         <h3 hx-get="/console/stats/users" hx-trigger="load" hx-swap="innerHTML">-</h3>
         <p>Total Users</p>
